@@ -1,0 +1,169 @@
+
+
+#B# MODEL BULIDING 
+
+
+#B1# NEURAL NETWORK MODEL 1 -> 6 Nodes - TRAINING DATA
+
+#nn   # long output
+
+nn <- neuralnet(High + Low ~ TA + TL + GP + REV + EPS, data = train.df, linear.output = F, hidden = 6)
+
+names(nn)
+nn
+
+# display weights
+nn$weights
+
+# display predictions  #ie predicted probability 
+prediction(nn)
+
+#this shows the probability of like or dislike for each of the observations passed through the network
+#>>>>>>>>>>>>>>>>>>>the sum of the 2 usually sum up to 1 
+
+# plot network  #newwork diagram
+plot(nn, rep="best")
+
+dev.off()
+
+install.packages("pastecs")
+library(pastecs)
+
+
+pred <- predict(logit.reg, train.df, type = "response")
+
+#confusion Matrix
+c.mat <- table(ifelse(pred > 0.5, 1, 0), train.df[,3]) #2 way table: row by column
+c.mat
+sum(diag(c.mat))/sum(c.mat) # this gives accuracy  
+
+
+install.packages("InformationValue")
+library(InformationValue)
+
+plotROC(train.df[,3], pred)
+
+misClassError(train.df[,3], pred, threshold = 0.5)
+# Compute the optimal probability cutoff score, based on a user defined objective
+optimalCutoff(train.df[,3], pred, optimiseFor = "misclasserror",
+              returnDiagnostics = TRUE) 
+
+
+#LIFT CHART
+
+# plot lift chart
+plot(c(0,gain$cume.pct.of.total*sum(train.df$ROE))~c(0,gain$cume.obs), 
+     xlab="# cases", ylab="Cumulative", main="", type="l")
+lines(c(0,sum(train.df$ROE))~c(0, dim(train.df)[1]), lty=2)
+
+#B2# NEURAL NETWORK MODEL 2 with Rescaling ->  DATA
+
+#Normalizing the TA, TL, GP, REV, EPS in train.df
+
+train.df[,4:6:11:12:13]<-scale(train.df[,4:6:11:12:13])
+train.df[,4:6:11:12:13]
+
+#B2# NEURAL NETWORK MODEL 2 -> 6 Nodes WITH RESCALED DATA
+
+#nn   # long output
+
+nn <- neuralnet(High + Low ~ TA + TL + GP + REV + EPS, data = train.df, linear.output = F, hidden = 6)
+
+names(nn)
+nn
+
+# display weights
+nn$weights
+
+# display predictions  #ie predicted probability 
+prediction(nn)
+
+#this shows the probability of like or dislike for each of the observations passed through the network
+#>>>>>>>>>>>>>>>>>>>the sum of the 2 usually sum up to 1 
+
+# plot network  #newwork diagram
+plot(nn, rep="best")
+
+dev.off()
+
+install.packages("pastecs")
+library(pastecs)
+
+pred <- predict(logit.reg, train.df, type = "response")
+
+#confusion Matrix
+c.mat <- table(ifelse(pred > 0.5, 1, 0), train.df[,3]) #2 way table: row by column
+c.mat
+sum(diag(c.mat))/sum(c.mat) # this gives accuracy  
+
+
+install.packages("InformationValue")
+library(InformationValue)
+
+plotROC(train.df[,3], pred)
+
+misClassError(train.df[,3], pred, threshold = 0.5)
+# Compute the optimal probability cutoff score, based on a user defined objective
+optimalCutoff(train.df[,3], pred, optimiseFor = "misclasserror",
+              returnDiagnostics = TRUE) 
+
+
+#LIFT CHART
+
+# plot lift chart
+plot(c(0,gain$cume.pct.of.total*sum(train.df$ROE))~c(0,gain$cume.obs), 
+     xlab="# cases", ylab="Cumulative", main="", type="l")
+lines(c(0,sum(train.df$ROE))~c(0, dim(train.df)[1]), lty=2)
+
+#B3# NEURAL NETWORK MODEL 1 ON VALIDATION DATA
+
+#nn   # long output
+
+nn <- neuralnet(High + Low ~ TA + TL + GP + REV + EPS, data = valid.df, linear.output = F, hidden = 6)
+
+names(nn)
+nn
+
+# display weights
+nn$weights
+
+# display predictions  #ie predicted probability 
+prediction(nn)
+
+#this shows the probability of like or dislike for each of the observations passed through the network
+#>>>>>>>>>>>>>>>>>>>the sum of the 2 usually sum up to 1 
+
+# plot network  #newwork diagram
+plot(nn, rep="best")
+
+dev.off()
+
+install.packages("pastecs")
+library(pastecs)
+
+pred <- predict(logit.reg, valid.df, type = "response")
+
+#confusion Matrix
+c.mat <- table(ifelse(pred > 0.5, 1, 0), valid.df[,3]) #2 way table: row by column
+c.mat
+sum(diag(c.mat))/sum(c.mat) # this gives accuracy  
+
+
+install.packages("InformationValue")
+library(InformationValue)
+
+plotROC(valid.df[,3], pred)
+
+misClassError(valid.df[,3], pred, threshold = 0.5)
+# Compute the optimal probability cutoff score, based on a user defined objective
+optimalCutoff(valid.df[,3], pred, optimiseFor = "misclasserror",
+              returnDiagnostics = TRUE) 
+
+
+#LIFT CHART
+
+# plot lift chart
+plot(c(0,gain$cume.pct.of.total*sum(valid.df$ROE))~c(0,gain$cume.obs), 
+     xlab="# cases", ylab="Cumulative", main="", type="l")
+lines(c(0,sum(valid.df$ROE))~c(0, dim(valid.df)[1]), lty=2)
+

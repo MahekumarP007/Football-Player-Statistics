@@ -1,0 +1,191 @@
+### Mahesh Kumar P 
+
+### DS 535 Report 5 
+
+### Trees and Random forests
+
+
+## Reading the dataset and selecting the variables 
+
+## footballplst.df <- read.csv("Football Players Stats (Premier League 2021-2022).csv")
+
+
+##  Clear out the null or empty values from the data frame in a new one.
+fbplst.df <- na.omit(footballplst.df)
+
+
+##  Converting the Gls variable to numeric 
+
+## fbplst.df$New_Gls <- as.numeric(fbplst.df$Gls)
+
+
+## Selecting only the necessary fields or columns for our Classification Tree model
+
+selected.var <- c (1, 4, 5, 6, 7, 9, 11, 12, 13, 15, 16, 19, 21, 22, 23, 24, 25, 28, 30, 31, 32, 33, 34, 35)
+
+
+# partition data
+set.seed(1)  # set seed for reproducing the partition
+
+train.index <- sample(c(1:546), 328)  
+
+##train.index <- sample(C(1:length(fbplst.df)), 0.6 * length(fbplst.df))
+
+
+train.df <- fbplst.df[train.index, selected.var]
+
+valid.df <- fbplst.df[-train.index, selected.var]    
+
+
+
+
+####  MP + Age +  Ast + GPK + PK + CrdY + G.A.PK90 + xG + npxG.xA + xA + xG.xA90 + npxG.xA90
+
+
+## The imp vars: GPK + xG + G.A.PK90 + npxG + G.A90 + npxG.xA + X90s + PK + xG.xA90 + CrdY + MP + Ast
+## CrdY + Ast + MP + PK + G.A90 ## No use including 
+## GPK + npxG + PK 
+
+
+library(rpart)
+library(rpart.plot)
+
+
+library(adabag)
+library(rpart) 
+library(caret)
+
+library(dplyr)       #for data wrangling
+library(e1071)       #for calculating variable importance
+library(caret)       #for general model fitting
+library(rpart)       #for fitting decision trees
+library(ipred)       #for fitting bagged decision trees
+library(gbm)
+
+
+
+
+# classification tree
+default.ct <- rpart(New.Gls~xG + G.A.PK90 + G.A90 + npxG.xA + X90s + PK + xG.xA90 + CrdY + MP + Ast, data = train.df, method = "class")
+# plot tree
+prp(default.ct, type = 1, extra = 1, split.font = 1, varlen = -10, box.col=ifelse(default.ct$frame$var == "<leaf>", 'red', 'green'))
+#### prp(default.ct)
+
+
+#  Tree 1 - Imp Vars
+tr <- rpart(New.Gls ~ G.A.PK90 + xG + npxG.xA + X90s + PK + Ast + MP + CrdY, data = train.df)
+prp(tr, type = 1, extra = 1, split.font = 1, varlen = -10, box.col=ifelse(default.ct$frame$var == "<leaf>", 'red', 'green'))  
+
+
+# Tree 2 - Unimp vars
+tr <- rpart(New.Gls ~ CrdY + Ast + MP + PK + G.A90, data = train.df)
+prp(tr, type = 1, extra = 1, split.font = 1, varlen = -10, box.col=ifelse(default.ct$frame$var == "<leaf>", 'red', 'green'))  
+
+
+#confusion Matrix
+
+# classify records in the training data.
+# set argument type = "class" in predict() to generate predicted class membership.
+default.ct.point.pred.train <- predict(default.ct, train.df,type = "class")
+
+# generate confusion matrix for training data
+table(default.ct.point.pred.train, train.df$New.Gls)
+
+
+### Validation data 
+
+# classify records in the validation data.
+default.ct.point.pred.valid <- predict(default.ct, valid.df,type = "class")
+
+# generate confusion matrix for training data
+table(default.ct.point.pred.valid, valid.df$New.Gls)
+
+
+
+### Deeper tree
+
+deeper.ct <- rpart(New.Gls ~ PK  + G.A90 + xG  + G.A.PK90 + MP + Ast, data = train.df, method = "class", cp = 0, minsplit = 1)
+prp(deeper.ct, type = 1, extra = 1, under = TRUE, split.font = 1, varlen = -10, 
+    box.col=ifelse(deeper.ct$frame$var == "<leaf>", 'red', 'green'))  
+
+## Classification Matrix 
+
+deeper.ct.point.pred.train <- predict(deeper.ct, train.df,type = "class")
+table(deeper.ct.point.pred.train, train.df$New.Gls)
+
+## Validation data for deeper tree
+
+deeper.ct.point.pred.valid <- predict(deeper.ct, valid.df,type = "class")
+table(deeper.ct.point.pred.valid, valid.df$New.Gls)
+
+
+
+## Random Forest 
+
+  rf <- randomForest(as.factor(New.Gls) ~ ., data = train.df, ntree = 300, 
+                     mtry = 4, nodesize = 5, importance = TRUE)  
+  
+  print(rf)
+  
+  
+  ## variable importance plot
+  varImpPlot(rf, type = 1)
+
+
+  ## confusion matrix
+  rf.pred <- predict(rf, train.df)
+  table(rf.pred, train.df$New.Gls)
+  
+  ## confusion matrix
+  rf.pred <- predict(rf, valid.df)
+  table(rf.pred, valid.df$New.Gls)
+
+
+
+## Pruned Tree 
+
+set.seed(6)
+cv.ct <- rpart(New.Gls ~ xG + G.A.PK90  + G.A90 + npxG.xA + X90s + PK + xG.xA90 + CrdY + MP + Ast, data = train.df, method = "class", cp = 0.00001, minsplit = 1, xval = 5)  
+printcp(cv.ct) 
+
+pruned.ct <- prune(cv.ct, cp = 0.0154639)
+prp(pruned.ct, type = 1, extra = 1, under = TRUE, split.font = 1, varlen = -10, 
+    box.col=ifelse(pruned.ct$frame$var == "<leaf>", 'gray', 'white')) 
+
+
+
+## Bagging Tree
+
+# bagging
+bag <- bagging(New.Gls ~ PK  + G.A90 + xG  + G.A.PK90 + MP + Ast, data = train.df)
+pred <- predict(bag, train.df, type = "class")
+table(ifelse(pred>0.2,1,0), train.df$New.Gls)
+
+## Validation data 
+
+pred <- predict(bag, valid.df, type = "class")
+table(ifelse(pred>0.2,1,0), valid.df$New.Gls)
+
+
+## Boosting Tree
+
+
+boost <- gbm(New.Gls ~ PK  + G.A90 + xG  + G.A.PK90 + MP + Ast, data = train.df, distribution = "multinomial")
+pred <- predict.gbm(boost, newdata=train.df, type="response")
+names(pred)
+
+
+predicted.class= apply(pred,1,which.max)-1
+table(ifelse(predicted.class=="1", 1, 0), train.df$New.Gls)
+
+## Validation data 
+
+pred <- predict.gbm(boost, newdata=valid.df, type="response")
+predicted.class= apply(pred,1,which.max)-1
+table(ifelse(predicted.class=="1", 1, 0), valid.df$New.Gls)
+
+
+###############################################
+
+###############################################
+
